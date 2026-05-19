@@ -1,29 +1,98 @@
 import cv2
 import sys
 import os
+from finish_line import select_finish_line
+from roi_selector import select_roi
+from person_detector import detect_persons
 
 VIDEO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "video.mp4")
 
+
+def crosses_line(box, line):
+    """Devuelve True si el pie del corredor cruzó la línea."""
+    x1, y1, x2, y2 = box
+    foot_x = (x1 + x2) // 2
+    foot_y = y2
+
+    (lx1, ly1), (lx2, ly2) = line
+    if lx2 == lx1:
+        return False
+    t = (foot_x - lx1) / (lx2 - lx1)
+    if not (0 <= t <= 1):
+        return False
+    line_y = ly1 + t * (ly2 - ly1)
+    return foot_y >= line_y
+
+
 def main():
     cap = cv2.VideoCapture(VIDEO_PATH)
-
     if not cap.isOpened():
-        print(f"Error: no se pudo abrir el video '{VIDEO_PATH}'")
+        print("Error: no se pudo abrir el video")
         sys.exit(1)
 
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print(f"Video abierto. {width}x{height} | FPS: {fps:.1f} | Frames totales: {total_frames}")
-    print("Presioná 'q' para salir.")
+    print(f"Video abierto. {width}x{height} | FPS: {fps:.1f}")
+
+    ret, first_frame = cap.read()
+    if not ret:
+        sys.exit(1)
+
+    roi = select_roi(first_frame)
+    if roi is None:
+        print("No se definió el ROI. Saliendo.")
+        sys.exit(1)
+    print(f"ROI definido: {roi}")
+
+    line = select_finish_line(first_frame)
+    if line is None:
+        print("No se definió la línea. Saliendo.")
+        sys.exit(1)
+    print(f"Línea definida: {line[0]} → {line[1]}")
+
+    # IDs que ya cruzaron la línea (para no registrar dos veces)
+    crossed_ids = set()
+    # Estado anterior de cada ID para detectar el momento exacto de cruce
+    prev_crossed = {}
+
+    frame_count = 0
+    position = 1
 
     while True:
         ret, frame = cap.read()
-
         if not ret:
             print("Fin del video.")
             break
+
+        frame_count += 1
+        detections = detect_persons(frame, roi)
+
+        # Dibujar ROI
+        rx1, ry1, rx2, ry2 = roi
+        cv2.rectangle(frame, (rx1, ry1), (rx2, ry2), (255, 165, 0), 2)
+
+        # Dibujar línea
+        cv2.line(frame, line[0], line[1], (0, 255, 0), 2)
+
+        for tid, x1, y1, x2, y2 in detections:
+            box = (x1, y1, x2, y2)
+            is_crossed = crosses_line(box, line)
+
+            # Detectar cruce: primera vez que crosses_line da True
+            if is_crossed and tid not in crossed_ids:
+                crossed_ids.add(tid)
+                timestamp = frame_count / fps
+                minutes = int(timestamp // 60)
+                seconds = int(timestamp % 60)
+                print(f"🏁 Posición {position} | ID {tid} | Tiempo en video: {minutes:02d}:{seconds:02d}")
+                position += 1
+
+            # Color según estado
+            color = (0, 0, 255) if is_crossed else (255, 0, 0)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, f"ID {tid}", (x1, y1 - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
         cv2.imshow("Marathon Tracker", frame)
 
@@ -32,6 +101,7 @@ def main():
 
     cap.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()
