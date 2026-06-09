@@ -5,7 +5,7 @@ from finish_line import select_finish_line
 from roi_selector import select_roi
 from person_detector import detect_persons
 
-VIDEO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "video.mp4")
+VIDEO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "honolulu.mp4")
 
 
 def crosses_line(box, line):

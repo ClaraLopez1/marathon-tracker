@@ -1,6 +1,8 @@
+from pathlib import Path
 from ultralytics import YOLO
 
-model = YOLO("yolov8n.pt")
+_MODEL_PATH = Path(__file__).parent.parent / "models" / "yolov8n.pt"
+model = YOLO(str(_MODEL_PATH))
 
 
 def detect_persons(frame, roi=None):

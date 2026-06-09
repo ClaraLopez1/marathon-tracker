@@ -25,3 +25,7 @@ Tabla automática con número de dorsal, timestamp de cruce y posición de llega
 
 ## TP Final — Visión Artificial · Universidad Austral
 Clara Lopez & Santos Bogo · 2026
+
+```
+yt-dlp -f "bestvideo" -o "data/honolulu.mp4" "https://youtu.be/gzABGQxcCPM?si=8NHYoOJ8BycfY0UB" && yt-dlp -f "bestvideo" -o "data/ellportcommunity.mp4" "https://www.youtube.com/watch?v=rJJ8hu-TDBU" && yt-dlp -f "bestvideo" -o "data/borntorun.mp4" "https://www.youtube.com/watch?v=MWNRColAEao"
+```
