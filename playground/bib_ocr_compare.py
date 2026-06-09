@@ -37,9 +37,9 @@ try:
     import logging
     logging.getLogger("ppocr").setLevel(logging.ERROR)
     PADDLE_OK = True
-except ImportError:
+except Exception:
     PADDLE_OK = False
-    print("[warn] paddleocr no instalado — PaddleOCR desactivado")
+    print("[warn] paddleocr no disponible — PaddleOCR desactivado")
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 

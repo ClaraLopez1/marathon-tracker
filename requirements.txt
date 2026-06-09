@@ -2,6 +2,6 @@ opencv-python
 ultralytics
 pytesseract
 easyocr
-easyocr
 paddleocr==2.7.3
 numpy<2
+paddlepaddle
