@@ -1,12 +1,22 @@
 import cv2
 import sys
-import os
+from pathlib import Path
 from finish_line import select_finish_line
 from roi_selector import select_roi
 from person_detector import detect_persons
 from bib_reader import BibReader, BibVoter
 
-VIDEO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "ellport.mp4")
+VIDEOS_DIR = Path(__file__).parent.parent / "videos"
+
+
+def get_video_path() -> Path:
+    if len(sys.argv) < 2:
+        print("Uso: python main.py <nombre_video>")
+        print(f"Videos disponibles en {VIDEOS_DIR}:")
+        for f in sorted(VIDEOS_DIR.iterdir()):
+            print(f"  {f.name}")
+        sys.exit(1)
+    return VIDEOS_DIR / sys.argv[1]
 
 
 def crosses_line(box, line):
@@ -26,9 +36,10 @@ def crosses_line(box, line):
 
 
 def main():
-    cap = cv2.VideoCapture(VIDEO_PATH)
+    video_path = get_video_path()
+    cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
-        print("Error: no se pudo abrir el video")
+        print(f"Error: no se pudo abrir {video_path}")
         sys.exit(1)
 
     fps = cap.get(cv2.CAP_PROP_FPS)

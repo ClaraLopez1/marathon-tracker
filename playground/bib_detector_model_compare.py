@@ -8,16 +8,26 @@ Correr con: python bib_detector_model_compare.py
 Controles: 'q' salir | SPACE pausar/resumir
 """
 
+import sys
 from pathlib import Path
 from ultralytics import YOLO
 from inference import get_model
 import cv2
 
 # ─── Config ───────────────────────────────────────────────────────────────────
- 
-ROOT = Path(__file__).parent.parent
-VIDEO_PATH = ROOT / "data" / "honolulu.mp4"
+
+ROOT       = Path(__file__).parent.parent
+VIDEOS_DIR = ROOT / "videos"
 MODELS_DIR = ROOT / "models"
+
+if len(sys.argv) < 2:
+    print("Uso: python bib_detector_model_compare.py <nombre_video>")
+    print(f"Videos disponibles en {VIDEOS_DIR}:")
+    for f in sorted(VIDEOS_DIR.iterdir()):
+        print(f"  {f.name}")
+    sys.exit(1)
+
+VIDEO_PATH = VIDEOS_DIR / sys.argv[1]
 
 MODEL_A_PATH = MODELS_DIR / "bib_yolov8-1.pt"
 

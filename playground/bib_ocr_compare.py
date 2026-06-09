@@ -12,6 +12,7 @@ Instalación previa:
   brew install tesseract          # macOS
 """
 
+import sys
 from pathlib import Path
 import cv2
 import numpy as np
@@ -44,8 +45,17 @@ except Exception:
 # ─── Config ───────────────────────────────────────────────────────────────────
 
 ROOT       = Path(__file__).parent.parent
-VIDEO_PATH = ROOT / "data" / "ellport.mp4"
+VIDEOS_DIR = ROOT / "videos"
 BIB_MODEL  = ROOT / "models" / "bib_yolov8-1.pt"
+
+if len(sys.argv) < 2:
+    print("Uso: python bib_ocr_compare.py <nombre_video>")
+    print(f"Videos disponibles en {VIDEOS_DIR}:")
+    for f in sorted(VIDEOS_DIR.iterdir()):
+        print(f"  {f.name}")
+    sys.exit(1)
+
+VIDEO_PATH = VIDEOS_DIR / sys.argv[1]
 
 CONF_BIB   = 0.35
 UPSCALE    = 3       # factor para ampliar el crop antes del OCR

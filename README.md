@@ -1,31 +1,75 @@
-# 🏃 Marathon Tracker
+# 🏃 Marathon Tracker - TP Final — Visión Artificial · Universidad Austral
+
+#### Clara Lopez & Santos Bogo
 
 Sistema de registro automático de corredores en maratón usando visión artificial.
 
 ## ¿Qué hace?
-Dado un video de la línea de llegada, detecta los dorsales de los corredores,
-lee el número de cada uno y registra el momento exacto de cruce.
+Dado un video de la línea de llegada:
+1. El usuario define interactivamente el ROI y la línea de llegada
+2. Detecta y trackea personas con YOLOv8
+3. Detecta los dorsales de cada corredor con un modelo YOLO fine-tuneado
+4. Lee el número del dorsal combinando PaddleOCR y EasyOCR con voting multi-frame
+5. Registra posición, número de dorsal y timestamp exacto de cada cruce
 
 ## Salida
-Tabla automática con número de dorsal, timestamp de cruce y posición de llegada.
+Por cada corredor que cruza la línea se imprime:
+```
+Posición 1 | ID 3 | Bib 1042 | Tiempo: 00:14
+```
 
 ## Tecnologías
-- Python 3
-- OpenCV
-- Tesseract OCR
-- Roboflow (modelo de detección de dorsales)
+- **Python 3.12**
+- **OpenCV** — video I/O, visualización, preprocesamiento de imágenes
+- **YOLOv8** (ultralytics) — detección y tracking de personas
+- **YOLOv8 fine-tuneado** (`bib_yolov8-1.pt`) — detección de dorsales
+- **PaddleOCR** + **EasyOCR** — lectura de números con voting multi-frame
 
 ## Estructura
-- `src/main.py` — loop principal de video
-- `src/finish_line.py` — definición de línea con mouse
-- `src/bib_detector.py` — detección del dorsal
-- `src/ocr.py` — lectura del número
-- `src/tracker.py` — lógica de cruce y tiempos
-- `src/visualization.py` — anotaciones sobre el frame
-
-## TP Final — Visión Artificial · Universidad Austral
-Clara Lopez & Santos Bogo · 2026
-
 ```
-yt-dlp -f "bestvideo" -o "data/honolulu.mp4" "https://youtu.be/gzABGQxcCPM?si=8NHYoOJ8BycfY0UB" && yt-dlp -f "bestvideo" -o "data/ellportcommunity.mp4" "https://www.youtube.com/watch?v=rJJ8hu-TDBU" && yt-dlp -f "bestvideo" -o "data/borntorun.mp4" "https://www.youtube.com/watch?v=MWNRColAEao"
+src/
+├── main.py            — loop principal de video, lógica de cruce
+├── person_detector.py — detección y tracking de personas (YOLOv8)
+├── bib_reader.py      — detección de dorsal + OCR + voting multi-frame
+├── roi_selector.py    — selección interactiva del ROI
+└── finish_line.py     — definición interactiva de la línea de llegada
+models/
+├── yolov8n.pt         — modelo base de personas
+└── bib_yolov8-1.pt    — modelo de detección de dorsales
+```
+
+
+## Setup
+
+### Activar venv con Python 3.12
+```sh
+python3.12 -m venv .venv
+source .venv/bin/activate
+```
+
+### Instalar dependencias
+```sh
+pip install -r requirements.txt
+```
+
+### Ejecutar
+```sh
+python src/main.py <nombre_video>
+```
+
+# Ejemplo:
+```sh
+python src/main.py ellport.mp4
+```
+
+## Descargar videos
+
+### Maratón en Ellport Community
+```sh
+yt-dlp -f "bestvideo" -o "videos/ellport.mp4" "https://www.youtube.com/watch?v=rJJ8hu-TDBU"
+```
+
+### Maratón "Born to Run"
+```sh
+yt-dlp -f "bestvideo" -o "videos/borntorun.mp4" "https://www.youtube.com/watch?v=MWNRColAEao"
 ```
