@@ -4,8 +4,9 @@ import os
 from finish_line import select_finish_line
 from roi_selector import select_roi
 from person_detector import detect_persons
+from bib_reader import BibReader, BibVoter
 
-VIDEO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "honolulu.mp4")
+VIDEO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "ellport.mp4")
 
 
 def crosses_line(box, line):
@@ -51,9 +52,10 @@ def main():
         sys.exit(1)
     print(f"Línea definida: {line[0]} → {line[1]}")
 
-    # IDs que ya cruzaron la línea (para no registrar dos veces)
+    bib_reader = BibReader()
+    voter      = BibVoter()
+
     crossed_ids = set()
-    # Estado anterior de cada ID para detectar el momento exacto de cruce
     prev_crossed = {}
 
     frame_count = 0
@@ -79,19 +81,36 @@ def main():
             box = (x1, y1, x2, y2)
             is_crossed = crosses_line(box, line)
 
+            # Acumular lecturas de bib mientras el corredor aún no cruzó
+            if tid not in crossed_ids:
+                result, weight = bib_reader.detect_and_read(frame, box)
+                if weight == -1:
+                    # Paddle y EasyOCR difieren: agregar ambas con peso 1
+                    paddle_text, easy_text = result
+                    voter.add(tid, paddle_text, 1)
+                    voter.add(tid, easy_text, 1)
+                elif result:
+                    voter.add(tid, result, weight)
+
             # Detectar cruce: primera vez que crosses_line da True
             if is_crossed and tid not in crossed_ids:
                 crossed_ids.add(tid)
+                bib_number = voter.get_best(tid) or "?"
+                voter.reset(tid)
                 timestamp = frame_count / fps
                 minutes = int(timestamp // 60)
                 seconds = int(timestamp % 60)
-                print(f"🏁 Posición {position} | ID {tid} | Tiempo en video: {minutes:02d}:{seconds:02d}")
+                print(f"Posición {position} | ID {tid} | Bib {bib_number} | Tiempo: {minutes:02d}:{seconds:02d}")
                 position += 1
 
             # Color según estado
             color = (0, 0, 255) if is_crossed else (255, 0, 0)
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(frame, f"ID {tid}", (x1, y1 - 8),
+            label = f"ID {tid}"
+            current_bib = voter.get_current(tid)
+            if current_bib:
+                label += f" #{current_bib}"
+            cv2.putText(frame, label, (x1, y1 - 8),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
         cv2.imshow("Marathon Tracker", frame)

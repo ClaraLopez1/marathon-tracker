@@ -44,7 +44,7 @@ except Exception:
 # ─── Config ───────────────────────────────────────────────────────────────────
 
 ROOT       = Path(__file__).parent.parent
-VIDEO_PATH = ROOT / "data" / "ellport_cut.mp4"
+VIDEO_PATH = ROOT / "data" / "ellport.mp4"
 BIB_MODEL  = ROOT / "models" / "bib_yolov8-1.pt"
 
 CONF_BIB   = 0.35
