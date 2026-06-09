@@ -52,6 +52,10 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+```sh
+brew install ffmpeg
+```
+
 ### Ejecutar
 ```sh
 python src/main.py <nombre_video>
@@ -69,7 +73,19 @@ python src/main.py ellport.mp4
 yt-dlp -f "bestvideo" -o "videos/ellport.mp4" "https://www.youtube.com/watch?v=rJJ8hu-TDBU"
 ```
 
+#### Recortar video:
+```sh
+ffmpeg -ss 00:08:04 -i "videos/ellport.mp4" -c copy "videos/ellport_cut.mp4"
+mv videos/ellport_cut.mp4 videos/ellport.mp4
+```
+
 ### Maratón "Born to Run"
 ```sh
 yt-dlp -f "bestvideo" -o "videos/borntorun.mp4" "https://www.youtube.com/watch?v=MWNRColAEao"
+```
+
+#### Recortar video:
+```sh
+ffmpeg -ss 00:05:00 -i "videos/borntorun.mp4" -c copy "videos/borntorun_cut.mp4"
+mv videos/borntorun_cut.mp4 videos/borntorun.mp4
 ```
