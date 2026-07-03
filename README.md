@@ -86,6 +86,6 @@ yt-dlp -f "bestvideo" -o "videos/borntorun.mp4" "https://www.youtube.com/watch?v
 
 #### Recortar video:
 ```sh
-ffmpeg -ss 00:05:00 -i "videos/borntorun.mp4" -c copy "videos/borntorun_cut.mp4"
+ffmpeg -ss 00:00:15 -i "videos/borntorun.mp4" -c copy "videos/borntorun_cut.mp4"
 mv videos/borntorun_cut.mp4 videos/borntorun.mp4
 ```

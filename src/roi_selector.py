@@ -1,52 +1,63 @@
 import cv2
+import numpy as np
 
-roi_points = []
-drawing = False
+_poly_points = []
+_cursor = (0, 0)
 
-def on_mouse(event, x, y, flags, param):
-    global roi_points, drawing
+
+def _on_mouse(event, x, y, flags, param):
+    global _poly_points, _cursor
+    _cursor = (x, y)
     if event == cv2.EVENT_LBUTTONDOWN:
-        roi_points = [(x, y)]
-        drawing = True
-    elif event == cv2.EVENT_MOUSEMOVE and drawing:
-        roi_points = [roi_points[0], (x, y)]
-    elif event == cv2.EVENT_LBUTTONUP:
-        roi_points.append((x, y))
-        drawing = False
+        _poly_points.append((x, y))
+
 
 def select_roi(frame):
-    """El usuario arrastra un rectángulo sobre el frame para definir el ROI."""
-    global roi_points, drawing
-    roi_points = []
-    drawing = False
+    """El usuario hace click para definir los vértices del ROI poligonal.
+    Enter confirma (mínimo 3 puntos). Backspace deshace el último punto."""
+    global _poly_points, _cursor
+    _poly_points = []
+    _cursor = (0, 0)
 
     clone = frame.copy()
     cv2.namedWindow("Seleccionar ROI")
-    cv2.setMouseCallback("Seleccionar ROI", on_mouse)
+    cv2.setMouseCallback("Seleccionar ROI", _on_mouse)
 
-    print("Arrastrá un rectángulo para definir el área de corredores. Enter para confirmar.")
+    print("Hacé click para agregar vértices del ROI. Backspace para deshacer. Enter para confirmar (mínimo 3 puntos).")
 
     while True:
         display = clone.copy()
 
-        if len(roi_points) == 2:
-            cv2.rectangle(display, roi_points[0], roi_points[1], (255, 165, 0), 2)
+        if len(_poly_points) >= 2:
+            pts = np.array(_poly_points, dtype=np.int32)
+            cv2.polylines(display, [pts], isClosed=False, color=(255, 165, 0), thickness=2)
+
+        # Línea desde el último punto hasta el cursor
+        if len(_poly_points) >= 1:
+            cv2.line(display, _poly_points[-1], _cursor, (255, 165, 0), 1)
+            # Preview del cierre del polígono
+            if len(_poly_points) >= 3:
+                cv2.line(display, _poly_points[0], _cursor, (255, 165, 0), 1)
+
+        # Dibujar vértices
+        for pt in _poly_points:
+            cv2.circle(display, pt, 5, (0, 200, 255), -1)
+
+        n = len(_poly_points)
+        msg = f"Vértices: {n}  |  Enter para confirmar" if n >= 3 else f"Vértices: {n}  |  Necesitás al menos 3"
+        cv2.putText(display, msg, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
         cv2.imshow("Seleccionar ROI", display)
 
         key = cv2.waitKey(1) & 0xFF
-        if key == 13 and len(roi_points) == 2:  # Enter
+        if key == 13 and len(_poly_points) >= 3:  # Enter
             break
-        if key == 27:
-            roi_points = []
+        if key in (8, 127) and _poly_points:      # Backspace
+            _poly_points.pop()
+        if key == 27:                              # Esc
+            _poly_points = []
             break
 
     cv2.destroyWindow("Seleccionar ROI")
 
-    if len(roi_points) == 2:
-        x1 = min(roi_points[0][0], roi_points[1][0])
-        y1 = min(roi_points[0][1], roi_points[1][1])
-        x2 = max(roi_points[0][0], roi_points[1][0])
-        y2 = max(roi_points[0][1], roi_points[1][1])
-        return (x1, y1, x2, y2)
-    return None
+    return _poly_points if len(_poly_points) >= 3 else None

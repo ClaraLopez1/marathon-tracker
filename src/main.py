@@ -1,5 +1,6 @@
 import cv2
 import sys
+import numpy as np
 from pathlib import Path
 from finish_line import select_finish_line
 from roi_selector import select_roi
@@ -66,8 +67,11 @@ def main():
     bib_reader = BibReader()
     voter      = BibVoter()
 
-    crossed_ids = set()
-    prev_crossed = {}
+    crossed_ids        = set()           # IDs que ya cruzaron la línea (permanente)
+    crossed_timestamps = {}              # tid → timestamp del cruce
+    frames_absent      = {}              # tid → frames consecutivos fuera del ROI
+
+    GRACE_FRAMES = 20                    # frames de gracia antes de considerar que salió
 
     frame_count = 0
     position = 1
@@ -80,10 +84,27 @@ def main():
 
         frame_count += 1
         detections = detect_persons(frame, roi)
+        active_ids_curr = {tid for tid, *_ in detections}
+
+        # Actualizar contador de ausencia para corredores que cruzaron y no se ven
+        for tid in list(crossed_timestamps):
+            if tid not in active_ids_curr:
+                frames_absent[tid] = frames_absent.get(tid, 0) + 1
+                if frames_absent[tid] >= GRACE_FRAMES:
+                    timestamp = crossed_timestamps.pop(tid)
+                    frames_absent.pop(tid, None)
+                    bib_number = voter.get_best(tid) or "?"
+                    voter.reset(tid)
+                    minutes = int(timestamp // 60)
+                    seconds = int(timestamp % 60)
+                    print(f"Posición {position} | ID {tid} | Bib {bib_number} | Tiempo: {minutes:02d}:{seconds:02d}")
+                    position += 1
+            else:
+                frames_absent.pop(tid, None)  # reapareció, resetear contador
 
         # Dibujar ROI
-        rx1, ry1, rx2, ry2 = roi
-        cv2.rectangle(frame, (rx1, ry1), (rx2, ry2), (255, 165, 0), 2)
+        pts = np.array(roi, dtype=np.int32)
+        cv2.polylines(frame, [pts], isClosed=True, color=(255, 165, 0), thickness=2)
 
         # Dibujar línea
         cv2.line(frame, line[0], line[1], (0, 255, 0), 2)
@@ -92,30 +113,23 @@ def main():
             box = (x1, y1, x2, y2)
             is_crossed = crosses_line(box, line)
 
-            # Acumular lecturas de bib mientras el corredor aún no cruzó
-            if tid not in crossed_ids:
-                result, weight = bib_reader.detect_and_read(frame, box)
-                if weight == -1:
-                    # Paddle y EasyOCR difieren: agregar ambas con peso 1
-                    paddle_text, easy_text = result
-                    voter.add(tid, paddle_text, 1)
-                    voter.add(tid, easy_text, 1)
-                elif result:
-                    voter.add(tid, result, weight)
+            # OCR en cada frame mientras el corredor esté en el ROI
+            result, weight = bib_reader.detect_and_read(frame, box)
+            if weight == -1:
+                paddle_text, easy_text = result
+                voter.add(tid, paddle_text, 1)
+                voter.add(tid, easy_text, 1)
+            elif result:
+                voter.add(tid, result, weight)
 
-            # Detectar cruce: primera vez que crosses_line da True
+            # Guardar timestamp de cruce (solo la primera vez)
             if is_crossed and tid not in crossed_ids:
                 crossed_ids.add(tid)
-                bib_number = voter.get_best(tid) or "?"
-                voter.reset(tid)
-                timestamp = frame_count / fps
-                minutes = int(timestamp // 60)
-                seconds = int(timestamp % 60)
-                print(f"Posición {position} | ID {tid} | Bib {bib_number} | Tiempo: {minutes:02d}:{seconds:02d}")
-                position += 1
+                crossed_timestamps[tid] = frame_count / fps
+                frames_absent.pop(tid, None)
 
             # Color según estado
-            color = (0, 0, 255) if is_crossed else (255, 0, 0)
+            color = (0, 0, 255) if tid in crossed_ids else (255, 0, 0)
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
             label = f"ID {tid}"
             current_bib = voter.get_current(tid)

@@ -1,3 +1,4 @@
+import cv2
 from pathlib import Path
 from ultralytics import YOLO
 
@@ -37,9 +38,10 @@ def detect_persons(frame, roi=None):
 
 
 def is_in_roi(box, roi):
-    """Devuelve True si el centro del box está dentro del ROI."""
+    """Devuelve True si el centro del box está dentro del polígono ROI."""
+    import numpy as np
     x1, y1, x2, y2 = box
     cx = (x1 + x2) // 2
     cy = (y1 + y2) // 2
-    rx1, ry1, rx2, ry2 = roi
-    return rx1 < cx < rx2 and ry1 < cy < ry2
+    poly = np.array(roi, dtype=np.int32)
+    return cv2.pointPolygonTest(poly, (float(cx), float(cy)), measureDist=False) >= 0
